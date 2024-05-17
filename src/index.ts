@@ -14,6 +14,7 @@ export interface AuthenticatorParams {
   userPoolDomain: string;
   cookieExpirationDays?: number;
   disableCookieDomain?: boolean;
+  cookiePartitioned?: boolean;
   httpOnly?: boolean;
   sameSite?: SameSite;
   logLevel?: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
@@ -46,6 +47,7 @@ export class Authenticator {
   _userPoolDomain: string;
   _cookieExpirationDays: number;
   _disableCookieDomain: boolean;
+  _cookiePartitioned: boolean;
   _httpOnly: boolean;
   _sameSite?: SameSite;
   _cookieBase: string;
@@ -69,6 +71,7 @@ export class Authenticator {
     this._userPoolDomain = params.userPoolDomain;
     this._cookieExpirationDays = params.cookieExpirationDays || 365;
     this._disableCookieDomain = ('disableCookieDomain' in params && params.disableCookieDomain === true);
+    this._cookiePartitioned = ('cookiePartitioned' in params && params.cookiePartitioned === true);
     this._cookieDomain = params.cookieDomain;
     this._httpOnly = ('httpOnly' in params && params.httpOnly === true);
     this._sameSite = params.sameSite;
@@ -92,7 +95,7 @@ export class Authenticator {
   /**
    * Verify that constructor parameters are corrects.
    * @param  {object} params constructor params
-   * @return {void} throw an exception if params are incorects.
+   * @return {void} throw an exception if params are incorrect.
    */
   _verifyParams(params: AuthenticatorParams) {
     if (typeof params !== 'object') {
@@ -108,6 +111,9 @@ export class Authenticator {
     }
     if ('disableCookieDomain' in params && typeof params.disableCookieDomain !== 'boolean') {
       throw new Error('Expected params.disableCookieDomain to be boolean');
+    }
+    if ('cookiePartitioned' in params && typeof params.cookiePartitioned !== 'boolean') {
+      throw new Error('Expected params.cookiePartitioned to be boolean');
     }
     if ('cookieDomain' in params && typeof params.cookieDomain !== 'string') {
       throw new Error('Expected params.cookieDomain to be a string');
@@ -258,6 +264,9 @@ export class Authenticator {
       if (overrides.expirationDays !== undefined) {
         res.expires = new Date(Date.now() + overrides.expirationDays * 864e+5);
       }
+      if (overrides.partitioned !== undefined) {
+        res.partitioned = overrides.partitioned;
+      }
     }
     this._logger.debug({
       msg: 'Cookie settings overriden',
@@ -287,6 +296,7 @@ export class Authenticator {
       httpOnly: this._httpOnly,
       sameSite: this._sameSite,
       path: this._cookiePath,
+      partitioned: this._cookiePartitioned,
     };
     const cookies = [
       Cookies.serialize(`${usernameBase}.accessToken`, tokens.accessToken as string, this._getOverridenCookieAttributes(cookieAttributes, 'accessToken')),
@@ -464,6 +474,7 @@ export class Authenticator {
       httpOnly: this._httpOnly,
       sameSite: this._sameSite,
       path: this._cookiePath,
+      partitioned: this._cookiePartitioned,
     };
 
     let responseCookies: string[] = [];
@@ -550,6 +561,7 @@ export class Authenticator {
         httpOnly: this._httpOnly,
         sameSite: this._sameSite,
         path: this._cookiePath,
+        partitioned: this._cookiePartitioned,
       };
       cookies = [
         Cookies.serialize(`${this._cookieBase}.${PKCE_COOKIE_NAME_SUFFIX}`, csrfTokens.pkce || '', cookieAttributes),

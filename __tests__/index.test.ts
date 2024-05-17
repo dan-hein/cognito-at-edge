@@ -187,6 +187,45 @@ describe('private functions', () => {
     expect(authenticatorWithSameSite._jwtVerifier.verify).toHaveBeenCalled();
   });
 
+  test('should set Partitioned and Secure on cookies', async () => {
+    const authenticatorWithSameSite = new Authenticator({
+      region: 'us-east-1',
+      userPoolId: 'us-east-1_abcdef123',
+      userPoolAppId: '123456789qwertyuiop987abcd',
+      userPoolDomain: 'my-cognito-domain.auth.us-east-1.amazoncognito.com',
+      cookieExpirationDays: 365,
+      disableCookieDomain: false,
+      httpOnly: true,
+      cookiePartitioned: true,
+    });
+    authenticatorWithSameSite._jwtVerifier.cacheJwks(jwksData);
+
+    const username = 'toto';
+    const domain = 'example.com';
+    const path = '/test';
+    jest.spyOn(authenticatorWithSameSite._jwtVerifier, 'verify');
+    authenticatorWithSameSite._jwtVerifier.verify.mockReturnValueOnce(Promise.resolve({ token_use: 'id', 'cognito:username': username }));
+
+    const response = await authenticatorWithSameSite._getRedirectResponse({ accessToken: tokenData.access_token, idToken: tokenData.id_token, refreshToken: tokenData.refresh_token }, domain, path);
+    expect(response).toMatchObject({
+      status: '302',
+      headers: {
+        location: [{
+          key: 'Location',
+          value: path,
+        }],
+      },
+    });
+    expect(response?.headers?.['set-cookie']).toEqual(expect.arrayContaining([
+      {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.accessToken=${tokenData.access_token}; Domain=${domain}; Expires=${DATE.toUTCString()}; Secure; HttpOnly; Partitioned`},
+      {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.refreshToken=${tokenData.refresh_token}; Domain=${domain}; Expires=${DATE.toUTCString()}; Secure; HttpOnly; Partitioned`},
+      {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.tokenScopesString=phone%20email%20profile%20openid%20aws.cognito.signin.user.admin; Domain=${domain}; Expires=${DATE.toUTCString()}; Secure; HttpOnly; Partitioned`},
+      {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.idToken=${tokenData.id_token}; Domain=${domain}; Expires=${DATE.toUTCString()}; Secure; HttpOnly; Partitioned`},
+      {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.LastAuthUser=${username}; Domain=${domain}; Expires=${DATE.toUTCString()}; Secure; HttpOnly; Partitioned`},
+    ]));
+    expect(authenticatorWithSameSite._jwtVerifier.verify).toHaveBeenCalled();
+  });
+
   test('should set Path on cookies', async () => {
     const cookiePath = '/test/path';
     const authenticatorWithPath = new Authenticator({
@@ -291,6 +330,7 @@ describe('private functions', () => {
           sameSite: 'Lax',
           path: '/foo',
           expirationDays: 2,
+          partitioned: true,
         },
       },
     });
@@ -313,7 +353,7 @@ describe('private functions', () => {
       },
     });
     expect(response?.headers?.['set-cookie']).toEqual(expect.arrayContaining([
-      {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.accessToken=${tokenData.access_token}; Domain=${domain}; Path=${'/foo'}; Expires=${DATE.toUTCString()}; Secure; SameSite=Lax`},
+      {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.accessToken=${tokenData.access_token}; Domain=${domain}; Path=${'/foo'}; Expires=${DATE.toUTCString()}; Secure; SameSite=Lax; Partitioned`},
       {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.refreshToken=${tokenData.refresh_token}; Domain=${domain}; Path=${cookiePath}; Expires=${DATE.toUTCString()}; Secure; HttpOnly`},
       {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.tokenScopesString=phone%20email%20profile%20openid%20aws.cognito.signin.user.admin; Domain=${domain}; Path=${cookiePath}; Expires=${DATE.toUTCString()}; Secure; HttpOnly`},
       {key: 'Set-Cookie', value: `CognitoIdentityServiceProvider.123456789qwertyuiop987abcd.${username}.idToken=${tokenData.id_token}; Domain=${domain}; Path=${cookiePath}; Expires=${DATE.toUTCString()}; Secure; HttpOnly`},
@@ -521,6 +561,7 @@ describe('createAuthenticator', () => {
       cookieExpirationDays: 365,
       disableCookieDomain: true,
       httpOnly: false,
+      cookiePartitioned: true,
     };
   });
 
@@ -535,6 +576,11 @@ describe('createAuthenticator', () => {
 
   test('should create authenticator without disableCookieDomain', () => {
     delete params.disableCookieDomain;
+    expect(typeof new Authenticator(params)).toBe('object');
+  });
+
+  test('should create authenticator without cookiePartitioned', () => {
+    delete params.cookiePartitioned;
     expect(typeof new Authenticator(params)).toBe('object');
   });
 
@@ -553,8 +599,13 @@ describe('createAuthenticator', () => {
     expect(typeof new Authenticator(params)).toBe('object');
   });
 
-  test('should create authenticator with unvalidated samesite', () => {
+  test('should fail authenticator with unvalidated samesite', () => {
     params.sameSite = '123';
+    expect(() => new Authenticator(params)).toThrow('Expected params');
+  });
+
+  test('should fail authenticator with unvalidated cookiePartitioned', () => {
+    params.cookiePartitioned = '123';
     expect(() => new Authenticator(params)).toThrow('Expected params');
   });
 

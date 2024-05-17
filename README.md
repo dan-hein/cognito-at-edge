@@ -63,12 +63,14 @@ For an explanation of the interactions between CloudFront, Cognito and Lambda@Ed
   * `parseAuthPath` *string* (Optional) URI path used as redirect target after successful Cognito authentication (eg: `/oauth2/idpresponse`), defaults to the web domain root. Needs to be a path that is handled by the library. When using this parameter, you should also provide a value for `cookiePath` to ensure your cookies are available for the right paths.
   * `cookiePath` *string* (Optional) Sets Path attribute in cookies
   * `cookieDomain` *string* (Optional) Sets the domain name used for the token cookies
+  * `cookiePartitioned` *boolean* (Optional) Allows you to partition a cookie into its own jar. Requires "Secure" Cookie Header. This can be used to safely read "third-party cookies" at the top-level site only in integrated architectures.
   * `cookieSettingsOverrides` *object* (Optional) Cookie settings overrides for different token cookies -- idToken, accessToken and refreshToken
     * `idToken` *CookieSettings* (Optional) Setting overrides to use for idToken
       * `expirationDays` *number* (Optional) Number of day to set cookies expiration date, default to 365 days (eg: `365`). It's recommended to set this value to match `refreshTokenValidity` parameter of the pool client.
       * `path` *string* (Optional) Sets Path attribute in cookies
       * `httpOnly` *boolean* (Optional) Forbids JavaScript from accessing the cookies, defaults to false (eg: `false`). Note, if this is set to `true`, the cookies will not be accessible to Amplify auth if you are using it client side.
       * `sameSite` *Strict | Lax | None* (Optional) Allows you to declare if your cookie should be restricted to a first-party or same-site context (eg: `SameSite=None`).
+      * `partitioned` *boolean* (Optional) Allows you to partition a cookie into its own jar. Requires "Secure" Cookie Header. This can be used to safely read "third-party cookies" at the top-level site only in integrated architectures.
     * `accessToken` *CookieSettings* (Optional) Setting overrides to use for accessToken
     * `refreshToken` *CookieSettings* (Optional) Setting overrides to use for refreshToken
   * `logoutConfiguration` *object* (Optional) Enables logout functionality

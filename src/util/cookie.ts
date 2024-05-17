@@ -54,6 +54,12 @@ export interface CookieAttributes {
      * Refer to {@link https://www.rfc-editor.org/rfc/rfc6265#section-4.1.2.5 RFC 6265 section 4.1.2.5.} for more details.
      */
     secure?: boolean;
+
+    /**
+     * The Partitioned attribute allows you opt a cookie into partitioned storage allowing third-party cookies to only be accessed by the top-level site.
+     * Refer to {@link https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html#name-third-party-cookies RFC 6265 section 7.1.} and {@link https://developer.mozilla.org/en-US/docs/Web/Privacy/Privacy_sandbox/Partitioned_cookies mdn CHIPS documentation} for more details.
+     */
+    partitioned?: boolean;
 }
 
 export type CookieType = 'idToken' | 'accessToken' | 'refreshToken';
@@ -76,9 +82,14 @@ export interface CookieSettings {
   httpOnly?: boolean;
 
   /**
-   * Controls whether or not a cookie is sent with cross-site requests
+   * Controls whether a cookie is sent with cross-site requests
    */
   sameSite?: SameSite;
+
+  /**
+   * Controls whether a cookie is partitioned into its own jar. Requires "Secure" Cookie Header.
+   */
+  partitioned?: boolean;
 }
 
 export interface CookieSettingsOverrides {
@@ -132,9 +143,10 @@ export class Cookies {
       ...(attributes.path ? [`Path=${attributes.path}`] : []),
       ...(attributes.expires ? [`Expires=${attributes.expires.toUTCString()}`] : []),
       ...(attributes.maxAge ? [`Max-Age=${attributes.maxAge}`] : []),
-      ...(attributes.secure ? ['Secure'] : []),
+      ...(attributes.secure || attributes.partitioned ? ['Secure'] : []),
       ...(attributes.httpOnly ? ['HttpOnly'] : []),
       ...(attributes.sameSite ? [`SameSite=${attributes.sameSite}`] : []),
+      ...(attributes.partitioned ? ['Partitioned'] : []),
     ].join('; ');
   }
 
